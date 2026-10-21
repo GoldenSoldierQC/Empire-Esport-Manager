@@ -1,0 +1,6 @@
+{
+  "summary":  "Mise à jour du plan d'implémentation suite à l'analyse du document de spécification AoE2 Competitive Management Simulator : ajout des courbes télémétriques en direct pendant les matchs, du semainier d'entraînement interactif (Lundi-Dimanche) par joueur, et du Mode Replay post-match avec scrubbing tick par tick et export JSON.",
+  "updatedAt":  "2026-10-21T09:14:52.474430666Z",
+  "requestFeedback":  true,
+  "userFacing":  true
+}

@@ -1,0 +1,6 @@
+{
+  "name": "Aegis Empire Manager",
+  "description": "Simulation de gestion d'équipe esport RTS style Age of Empires en pixel art vue de dessus, moteur par ticks avec DAG visuel et pipeline ETL.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
