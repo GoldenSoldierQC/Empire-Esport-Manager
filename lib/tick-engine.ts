@@ -1,9 +1,12 @@
 import {
+  AoEStatsMatchRow,
+  AoEStatsPlayerRow,
   BuildOrderDag,
   Civilization,
   EsportsPlayer,
   LiveMatchState,
   MatchTickEvent,
+  QuarantineRecord,
   RtsMap,
   TickSideState,
   UnitCategory,
@@ -167,6 +170,7 @@ export function computeCivMatchupModifier(ownCiv: Civilization, enemyCiv: Civili
   }
   return 1.0;
 }
+
 
 export function createInitialMatchState(params: {
   matchId: string;
@@ -1092,3 +1096,164 @@ export function runMonteCarloBatchSimulation(params: {
     convergenceSeries: sampleWinRates,
   };
 }
+
+/**
+ * Intervalle de confiance de Wilson à 95 % (z = 1.96) — Section 5.4
+ * Obligatoire pour les taux de victoire à haut Elo (2000+, ~1 % des parties)
+ * où la taille d'échantillon par matchup peut descendre sous 10-50 parties par patch.
+ */
+export function computeWilsonScoreInterval(
+  winRate: number,
+  sampleSize: number,
+  z: number = 1.96
+): {
+  centerPct: number;
+  lowPct: number;
+  highPct: number;
+  lowerPct: number;
+  upperPct: number;
+  marginPct: number;
+  sampleSize: number;
+  isLowSampleWarning: boolean;
+} {
+  const n = Math.max(1, sampleSize);
+  const p = Math.max(0, Math.min(1, winRate));
+  const z2 = z * z;
+  const denom = 1 + z2 / n;
+  const center = (p + z2 / (2 * n)) / denom;
+  const halfWidth = (z * Math.sqrt((p * (1 - p)) / n + z2 / (4 * n * n))) / denom;
+
+  const lowerPct = Math.round(Math.max(0, center - halfWidth) * 1000) / 10;
+  const upperPct = Math.round(Math.min(1, center + halfWidth) * 1000) / 10;
+  const centerPct = Math.round(p * 1000) / 10;
+  const marginPct = Math.round(((upperPct - lowerPct) / 2) * 10) / 10;
+
+  return {
+    centerPct,
+    lowPct: lowerPct,
+    highPct: upperPct,
+    lowerPct,
+    upperPct,
+    marginPct,
+    sampleSize: n,
+    isLowSampleWarning: n < 30,
+  };
+}
+
+/**
+ * Pipeline de Validation & Quarantaine AoEStats Parquet (Sections 4, 5 & 6)
+ * Sépare les lignes saines (`data/normalized/`) des anomalies détournées vers `data/quarantine/`.
+ */
+export function runAoEStatsQuarantineValidation(
+  matches: AoEStatsMatchRow[],
+  players: AoEStatsPlayerRow[]
+): {
+  validMatches: AoEStatsMatchRow[];
+  validPlayers: AoEStatsPlayerRow[];
+  quarantineRecords: QuarantineRecord[];
+  replayEnhancedCoveragePct: number;
+} {
+  const validMatches: AoEStatsMatchRow[] = [];
+  const validMatchIds = new Set<string>();
+  const quarantineRecords: QuarantineRecord[] = [];
+  const nowUtc = '2026-10-18T23:20:00Z';
+
+  for (const m of matches) {
+    // 1. Anomalie Section 5.1 : Dirty Player Counts (1, 3, 5, 7 joueurs)
+    if (m.num_players % 2 !== 0 || m.num_players <= 0) {
+      quarantineRecords.push({
+        id: `q_odd_${m.game_id}`,
+        game_id: m.game_id,
+        tag: 'ERR_ODD_PLAYER_COUNT',
+        reason: `Nombre de joueurs impair invalide (num_players = ${m.num_players}) détecté dans matches.parquet.`,
+        targetPath: 'data/quarantine/odd_player_counts.parquet',
+        detectedAtUtc: nowUtc,
+      });
+      continue;
+    }
+
+    // 2. Filtre Section 4.1 & 4.4 : Durée hors bornes (< 5 min early disconnect ou > 180 min)
+    if (m.duration < 300 || m.duration > 10800) {
+      quarantineRecords.push({
+        id: `q_dur_${m.game_id}`,
+        game_id: m.game_id,
+        tag: 'ERR_DURATION_OUT_OF_BOUNDS',
+        reason: `Durée de match hors bornes (${m.duration}s ; requis : 300s–10800s, déconnexion précoce exclue).`,
+        targetPath: 'data/quarantine/duration_anomalies.parquet',
+        detectedAtUtc: nowUtc,
+      });
+      continue;
+    }
+
+    // 3. Filtre Section 4.3 : Matchs miroirs exclus de l'agrégation Win-Rate des civilisations
+    if (m.mirror) {
+      quarantineRecords.push({
+        id: `q_mir_${m.game_id}`,
+        game_id: m.game_id,
+        tag: 'WARN_MIRROR_MATCH_EXCLUDED',
+        reason: 'Match miroir (civilisations identiques) exclu de l’agrégation Win-Rate.',
+        targetPath: 'data/quarantine/mirror_matches.parquet',
+        detectedAtUtc: nowUtc,
+      });
+      continue;
+    }
+
+    validMatches.push(m);
+    validMatchIds.add(m.game_id);
+  }
+
+  const validPlayers: AoEStatsPlayerRow[] = [];
+  for (const p of players) {
+    // 4. Anomalie Section 6.2 : Intégrité référentielle (Orphan player row)
+    if (!validMatchIds.has(p.game_id)) {
+      const parentExistsInRaw = matches.some((m) => m.game_id === p.game_id);
+      if (!parentExistsInRaw) {
+        quarantineRecords.push({
+          id: `q_orph_${p.game_id}_${p.profile_id}`,
+          game_id: p.game_id,
+          profile_id: p.profile_id,
+          tag: 'ERR_ORPHAN_PLAYER_ROW',
+          reason: `Violation d'intégrité référentielle : game_id '${p.game_id}' absent de matches.parquet.`,
+          targetPath: 'data/quarantine/orphan_players.parquet',
+          detectedAtUtc: nowUtc,
+        });
+      }
+      continue;
+    }
+
+    // 5. Filtre Section 4.5 : Exclusion des comptes "One-Trick Pony" (>100 matchs avec >=80% pick rate sur 1 civ)
+    if (
+      (p.total_account_matches ?? 0) > 100 &&
+      (p.single_civ_pick_rate ?? 0) >= 0.8
+    ) {
+      quarantineRecords.push({
+        id: `q_otp_${p.game_id}_${p.profile_id}`,
+        game_id: p.game_id,
+        profile_id: p.profile_id,
+        tag: 'ERR_ONE_TRICK_PONY_ACCOUNT',
+        reason: `Compte One-Trick Pony exclu (${p.total_account_matches} matchs, ${Math.round(
+          (p.single_civ_pick_rate ?? 0) * 100
+        )}% sur ${p.civ}).`,
+        targetPath: 'data/quarantine/otp_accounts.parquet',
+        detectedAtUtc: nowUtc,
+      });
+      continue;
+    }
+
+    validPlayers.push(p);
+  }
+
+  const replayEnhancedCount = matches.filter((m) => m.replay_enhanced).length;
+  const replayEnhancedCoveragePct =
+    matches.length > 0
+      ? Math.round((replayEnhancedCount / matches.length) * 1000) / 10
+      : 0;
+
+  return {
+    validMatches,
+    validPlayers,
+    quarantineRecords,
+    replayEnhancedCoveragePct,
+  };
+}
+

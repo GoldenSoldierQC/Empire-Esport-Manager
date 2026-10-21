@@ -12,6 +12,7 @@ import {
   computeCivMatchupModifier,
   computeEffectiveMicro,
   computeSynergyModifier,
+  computeWilsonScoreInterval,
   createInitialMatchState,
   stepMatchTick,
 } from '@/lib/tick-engine';
@@ -349,6 +350,17 @@ export default function MatchArenaView({
           )
         ) * 10
       ) / 10;
+    // Échantillon haut Elo (2000+, ~1% des parties AoEStats) et intervalle de Wilson à 95%
+    const highEloSampleSize =
+      18 +
+      ((blueCiv.id.charCodeAt(0) +
+        redCiv.id.charCodeAt(0) +
+        selectedMap.id.charCodeAt(0)) %
+        24);
+    const matchupWilsonCi = computeWilsonScoreInterval(
+      etlWinProb / 100,
+      highEloSampleSize
+    );
 
     return (
       <div className="max-w-[1400px] mx-auto px-6 py-8 space-y-8">
@@ -781,10 +793,17 @@ export default function MatchArenaView({
               </div>
 
               {hasAnalyst && (
-                <div className="p-2.5 rounded bg-[#0B0F17] border border-slate-800 text-xs font-mono text-emerald-400 tabular-nums">
-                  Matrice Méta (Cible 48%–52%) : {etlWinProb}% de probabilité pour{' '}
-                  {bluePlayer.handle} ({blueCiv.name}) contre {redCiv.name} sur{' '}
-                  {selectedMap.name}.
+                <div className="p-2.5 rounded bg-[#0B0F17] border border-slate-800 text-xs font-mono text-emerald-400 tabular-nums space-y-1">
+                  <div>
+                    Matrice Méta (Elo 2000+) : {etlWinProb}% pour{' '}
+                    {bluePlayer.handle} ({blueCiv.name} vs {redCiv.name} sur{' '}
+                    {selectedMap.name}).
+                  </div>
+                  <div className="text-[11px] text-amber-300/90">
+                    Échantillon AoEStats : n={matchupWilsonCi.sampleSize} matchs · IC Wilson 95% : [
+                    {matchupWilsonCi.lowerPct}% – {matchupWilsonCi.upperPct}%] (±
+                    {matchupWilsonCi.marginPct}%)
+                  </div>
                 </div>
               )}
             </div>

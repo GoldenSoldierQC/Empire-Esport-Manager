@@ -279,11 +279,22 @@ export interface LiveMatchState {
 
 export interface EtlPlayerRecord {
   rawId: string;
+  profileId?: number;
   handle: string;
-  sourceApi: 'WorldsEdge_API' | 'SiegeEngineers_Dump' | 'CaptainsMode_Drafts';
+  sourceApi:
+    | 'AoEStats_Parquet'
+    | 'WorldsEdge_API'
+    | 'Liquipedia_API'
+    | 'SiegeEngineers_Dump'
+    | 'CaptainsMode_Drafts';
   rawLadderElo: number;
   tournamentWinRate: number;
-  avgFeudalTimeSec: number;
+  sampleSizeGames?: number;
+  replayEnhanced?: boolean;
+  avgFeudalTimeSec: number | null; // Nullable lorsque replay_enhanced = false (>60% des matchs)
+  avgCastleTimeSec?: number | null;
+  avgImperialTimeSec?: number | null;
+  inferredOpening?: string | null;
   avgeApm: number;
   normalizedVector: {
     micro: number;
@@ -291,6 +302,85 @@ export interface EtlPlayerRecord {
     tactical: number;
     mental: number;
   };
+}
+
+// --- SCHÉMAS PARQUET AOESTATS.IO & AGENT D'INTELLIGENCE COMPÉTITIVE ---
+
+export interface AoEStatsMatchRow {
+  game_id: string;
+  started_timestamp: string; // UTC ISO
+  duration: number; // secondes (filtre valide : 300s à 10800s)
+  map: string; // ex: "Arabia", "Arena", "Nomad"
+  avg_elo: number | null;
+  num_players: number; // 2=1v1, 4=2v2, 6=3v3, 8=4v4 (anomalies impaires 1,3,5,7 -> quarantaine)
+  team_0_elo: number | null;
+  team_1_elo: number | null;
+  replay_enhanced: boolean; // True si le replay a été parsé (~38% des matchs)
+  leaderboard: string; // ex: "1v1 Random Map"
+  mirror: boolean; // True si civilisations identiques (exclu de l'agrégation Win-Rate)
+  patch: number | null;
+  raw_match_type: number; // 6=1v1 RM, 7=2v2 RM, 8=3v3 RM, 9=4v4 RM, 66-69=Controller
+  game_type: string; // "random_map" | "empire_wars" | "deathmatch"
+  game_speed: string; // "normal" | "fast"
+  starting_age: string; // "dark" | "feudal" | "castle"
+}
+
+export interface AoEStatsPlayerRow {
+  game_id: string; // FK -> AoEStatsMatchRow.game_id
+  profile_id: number;
+  handle: string;
+  civ: string;
+  winner: boolean;
+  team: 0 | 1;
+  old_rating: number | null;
+  new_rating: number | null;
+  match_rating_diff: number | null;
+  feudal_age_uptime: number | null; // Requiert replay_enhanced = true
+  castle_age_uptime: number | null; // Requiert replay_enhanced = true
+  imperial_age_uptime: number | null; // Requiert replay_enhanced = true
+  opening: string | null; // ex: "Scout Rush", "Archer Flush", null si replay_enhanced = false
+  replay_summary_raw: string | null;
+  total_account_matches?: number;
+  single_civ_pick_rate?: number; // >= 0.80 sur >100 matchs = One-Trick Pony (exclu)
+}
+
+export type QuarantineRejectionTag =
+  | 'ERR_ODD_PLAYER_COUNT'
+  | 'ERR_DURATION_OUT_OF_BOUNDS'
+  | 'ERR_ORPHAN_PLAYER_ROW'
+  | 'ERR_ONE_TRICK_PONY_ACCOUNT'
+  | 'WARN_MIRROR_MATCH_EXCLUDED';
+
+export interface QuarantineRecord {
+  id: string;
+  game_id: string;
+  profile_id?: number;
+  tag: QuarantineRejectionTag;
+  reason: string;
+  targetPath: string; // ex: "data/quarantine/odd_player_counts.parquet"
+  detectedAtUtc: string;
+}
+
+export interface AoEStatsDumpManifest {
+  dateRange: string; // ex: "2023-04-23_2023-04-29"
+  matchesParquetUrl: string;
+  playersParquetUrl: string;
+  sha256Hash: string;
+  totalMatchesCount: number;
+  totalPlayerRowsCount: number;
+  replayEnhancedRatio: number;
+  quarantinedCount: number;
+  ingestedAtUtc: string;
+}
+
+export interface LiquipediaTournamentRecord {
+  id: string;
+  name: string;
+  tier: 'S-Tier' | 'A-Tier' | 'B-Tier';
+  prizePoolUsd: number;
+  organizer: string;
+  championHandle: string;
+  patchVersion: number;
 }
 
 // --- MODE CRÉATEUR : IDENTITÉ DE L'ÉCURIE & DU CEO ---
@@ -358,4 +448,5 @@ export interface TeamProfile {
   ceo: CeoProfile;
   settings: TeamSimulationSettings;
 }
+
 

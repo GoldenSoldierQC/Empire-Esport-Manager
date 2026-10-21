@@ -1,10 +1,14 @@
 import {
+  AoEStatsDumpManifest,
+  AoEStatsMatchRow,
+  AoEStatsPlayerRow,
   BuildOrderDag,
   CeoArchetype,
   Civilization,
   EsportsPlayer,
   EtlPlayerRecord,
   FacilityUpgrade,
+  LiquipediaTournamentRecord,
   OriginRegionCode,
   RtsMap,
   SponsorContract,
@@ -1137,54 +1141,373 @@ export const INITIAL_SPONSORS: SponsorContract[] = [
 
 export const RAW_ETL_DATASET: EtlPlayerRecord[] = [
   {
-    rawId: 'we_99412',
+    rawId: 'aoestats_196240',
+    profileId: 196240,
     handle: 'TheViper_AOE',
-    sourceApi: 'WorldsEdge_API',
+    sourceApi: 'AoEStats_Parquet',
     rawLadderElo: 2792,
     tournamentWinRate: 0.742,
+    sampleSizeGames: 148,
+    replayEnhanced: true,
     avgFeudalTimeSec: 552,
+    avgCastleTimeSec: 1145,
+    avgImperialTimeSec: 1890,
+    inferredOpening: 'Scout Rush -> 2TC Knights',
     avgeApm: 385,
     normalizedVector: {micro: 97, macro: 96, tactical: 98, mental: 97},
   },
   {
-    rawId: 'se_88301',
+    rawId: 'we_199325',
+    profileId: 199325,
     handle: 'Hera_RTS',
-    sourceApi: 'SiegeEngineers_Dump',
+    sourceApi: 'WorldsEdge_API',
     rawLadderElo: 2815,
     tournamentWinRate: 0.768,
+    sampleSizeGames: 182,
+    replayEnhanced: true,
     avgFeudalTimeSec: 546,
+    avgCastleTimeSec: 1120,
+    avgImperialTimeSec: 1840,
+    inferredOpening: '19p Scout Rush -> Hussar Mobility',
     avgeApm: 428,
     normalizedVector: {micro: 99, macro: 97, tactical: 96, mental: 95},
   },
   {
-    rawId: 'cm_77214',
+    rawId: 'lq_204118',
+    profileId: 204118,
     handle: 'Liereyy_Micro',
-    sourceApi: 'CaptainsMode_Drafts',
+    sourceApi: 'Liquipedia_API',
     rawLadderElo: 2754,
     tournamentWinRate: 0.715,
+    sampleSizeGames: 94,
+    replayEnhanced: true,
     avgFeudalTimeSec: 550,
+    avgCastleTimeSec: 1110,
+    avgImperialTimeSec: 1875,
+    inferredOpening: 'Double Range Archer Flush -> Xbow Timing',
     avgeApm: 412,
     normalizedVector: {micro: 99, macro: 92, tactical: 94, mental: 93},
   },
   {
-    rawId: 'we_66509',
+    rawId: 'aoestats_218804',
+    profileId: 218804,
     handle: 'Yo_Macro',
-    sourceApi: 'WorldsEdge_API',
+    sourceApi: 'AoEStats_Parquet',
     rawLadderElo: 2710,
     tournamentWinRate: 0.684,
-    avgFeudalTimeSec: 561,
+    sampleSizeGames: 116,
+    replayEnhanced: false, // >60% des matchs n'ont pas de téléchargement replay (uptime null)
+    avgFeudalTimeSec: null,
+    avgCastleTimeSec: null,
+    avgImperialTimeSec: null,
+    inferredOpening: null,
     avgeApm: 295,
     normalizedVector: {micro: 89, macro: 98, tactical: 96, mental: 96},
   },
   {
-    rawId: 'se_55120',
+    rawId: 'we_241902',
+    profileId: 241902,
     handle: 'Tatoh_Strategist',
-    sourceApi: 'SiegeEngineers_Dump',
+    sourceApi: 'WorldsEdge_API',
     rawLadderElo: 2690,
     tournamentWinRate: 0.665,
-    avgFeudalTimeSec: 558,
+    sampleSizeGames: 88,
+    replayEnhanced: false, // Télémétrie estimée par modèle Bayésien (sans replay_enhanced)
+    avgFeudalTimeSec: null,
+    avgCastleTimeSec: null,
+    avgImperialTimeSec: null,
+    inferredOpening: null,
     avgeApm: 320,
     normalizedVector: {micro: 91, macro: 94, tactical: 98, mental: 92},
+  },
+];
+
+// Manifestes hebdomadaires de dumps Parquet AoEStats (GET https://aoestats.io/api/db_dumps)
+export const AOESTATS_DUMP_MANIFESTS: AoEStatsDumpManifest[] = [
+  {
+    dateRange: '2026-10-12_2026-10-18',
+    matchesParquetUrl:
+      'https://aoestats.io/media/db_dumps/date_range=2026-10-12_2026-10-18/matches.parquet',
+    playersParquetUrl:
+      'https://aoestats.io/media/db_dumps/date_range=2026-10-12_2026-10-18/players.parquet',
+    sha256Hash: 'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855',
+    totalMatchesCount: 238410,
+    totalPlayerRowsCount: 476820,
+    replayEnhancedRatio: 0.384, // ~38.4% avec replay parsé (>60% sans replay)
+    quarantinedCount: 412,
+    ingestedAtUtc: '2026-10-18T23:15:00Z',
+  },
+  {
+    dateRange: '2026-10-05_2026-10-11',
+    matchesParquetUrl:
+      'https://aoestats.io/media/db_dumps/date_range=2026-10-05_2026-10-11/matches.parquet',
+    playersParquetUrl:
+      'https://aoestats.io/media/db_dumps/date_range=2026-10-05_2026-10-11/players.parquet',
+    sha256Hash: '8f434346648f6b96df89dda901c5176b10a6d83961dd3c1ac88b59b2dc327aa4',
+    totalMatchesCount: 235190,
+    totalPlayerRowsCount: 470380,
+    replayEnhancedRatio: 0.379,
+    quarantinedCount: 389,
+    ingestedAtUtc: '2026-10-11T23:10:00Z',
+  },
+  {
+    dateRange: '2023-04-23_2023-04-29',
+    matchesParquetUrl:
+      'https://aoestats.io/media/db_dumps/date_range=2023-04-23_2023-04-29/matches.parquet',
+    playersParquetUrl:
+      'https://aoestats.io/media/db_dumps/date_range=2023-04-23_2023-04-29/players.parquet',
+    sha256Hash: '4b227777d4dd1fc61c6f884f48641d02b4d121d3fd328cb08b5531fcacdabf8a',
+    totalMatchesCount: 231840,
+    totalPlayerRowsCount: 463680,
+    replayEnhancedRatio: 0.362,
+    quarantinedCount: 518,
+    ingestedAtUtc: '2023-04-30T22:45:00Z',
+  },
+];
+
+// Échantillon brut de `matches.parquet` incluant des lignes valides et les anomalies documentées (Section 5)
+export const AOESTATS_PARQUET_MATCHES: AoEStatsMatchRow[] = [
+  {
+    game_id: 'aoe2de_90811201',
+    started_timestamp: '2026-10-18T19:42:10Z',
+    duration: 1940, // 32m20s (valide : entre 300s et 10800s)
+    map: 'Arabia',
+    avg_elo: 2745.5,
+    num_players: 2, // 1v1 RM valide
+    team_0_elo: 2792.0,
+    team_1_elo: 2699.0,
+    replay_enhanced: true,
+    leaderboard: '1v1 Random Map',
+    mirror: false,
+    patch: 118476,
+    raw_match_type: 6, // 6 = 1v1 RM
+    game_type: 'random_map',
+    game_speed: 'normal',
+    starting_age: 'dark',
+  },
+  {
+    game_id: 'aoe2de_90811202',
+    started_timestamp: '2026-10-18T20:15:44Z',
+    duration: 2410, // 40m10s
+    map: 'Arena',
+    avg_elo: 2680.0,
+    num_players: 2,
+    team_0_elo: 2710.0,
+    team_1_elo: 2650.0,
+    replay_enhanced: false, // Pas de fichier replay parsé (>60% des cas)
+    leaderboard: '1v1 Random Map',
+    mirror: false,
+    patch: 118476,
+    raw_match_type: 6,
+    game_type: 'random_map',
+    game_speed: 'normal',
+    starting_age: 'dark',
+  },
+  {
+    game_id: 'aoe2de_90811203',
+    started_timestamp: '2026-10-18T21:04:12Z',
+    duration: 1620,
+    map: 'Gold Rush',
+    avg_elo: 2784.5,
+    num_players: 2,
+    team_0_elo: 2815.0,
+    team_1_elo: 2754.0,
+    replay_enhanced: true,
+    leaderboard: '1v1 Random Map',
+    mirror: false,
+    patch: 118476,
+    raw_match_type: 6,
+    game_type: 'random_map',
+    game_speed: 'normal',
+    starting_age: 'dark',
+  },
+  {
+    game_id: 'aoe2de_90811204_DIRTY_ODD',
+    started_timestamp: '2026-10-18T21:19:05Z',
+    duration: 1450,
+    map: 'Black Forest',
+    avg_elo: 2140.0,
+    num_players: 3, // ANOMALIE SECTION 5.1 : Dirty Player Count (impair : 1, 3, 5, 7) -> Quarantaine !
+    team_0_elo: 2160.0,
+    team_1_elo: 2120.0,
+    replay_enhanced: false,
+    leaderboard: 'Team Random Map',
+    mirror: false,
+    patch: 118476,
+    raw_match_type: 7,
+    game_type: 'random_map',
+    game_speed: 'normal',
+    starting_age: 'dark',
+  },
+  {
+    game_id: 'aoe2de_90811205_EARLY_DROP',
+    started_timestamp: '2026-10-18T21:40:30Z',
+    duration: 175, // ANOMALIE SECTION 4 : < 300s (5 min) Early Disconnect -> Quarantaine !
+    map: 'Arabia',
+    avg_elo: 2490.0,
+    num_players: 2,
+    team_0_elo: 2500.0,
+    team_1_elo: 2480.0,
+    replay_enhanced: false,
+    leaderboard: '1v1 Random Map',
+    mirror: false,
+    patch: 118476,
+    raw_match_type: 6,
+    game_type: 'random_map',
+    game_speed: 'normal',
+    starting_age: 'dark',
+  },
+  {
+    game_id: 'aoe2de_90811206_MIRROR',
+    started_timestamp: '2026-10-18T22:05:19Z',
+    duration: 2110,
+    map: 'Nomad',
+    avg_elo: 2635.0,
+    num_players: 2,
+    team_0_elo: 2640.0,
+    team_1_elo: 2630.0,
+    replay_enhanced: true,
+    leaderboard: '1v1 Random Map',
+    mirror: true, // SECTION 4.3 : Match miroir (Franks vs Franks) -> Exclu du calcul de Win-Rate Civ
+    patch: 118476,
+    raw_match_type: 6,
+    game_type: 'random_map',
+    game_speed: 'normal',
+    starting_age: 'dark',
+  },
+];
+
+// Échantillon brut de `players.parquet` relié par `game_id` (Section 3.2 & Section 5)
+export const AOESTATS_PARQUET_PLAYERS: AoEStatsPlayerRow[] = [
+  {
+    game_id: 'aoe2de_90811201',
+    profile_id: 196240,
+    handle: 'TheViper_AOE',
+    civ: 'Mayans',
+    winner: true,
+    team: 0,
+    old_rating: 2784,
+    new_rating: 2792,
+    match_rating_diff: 93.0,
+    feudal_age_uptime: 552.4,
+    castle_age_uptime: 1145.0,
+    imperial_age_uptime: 1890.2,
+    opening: 'Archer Flush -> Crossbow Timing',
+    replay_summary_raw: '{"feudal_archers":16,"castle_xbows":28,"relics":3}',
+    total_account_matches: 1420,
+    single_civ_pick_rate: 0.14,
+  },
+  {
+    game_id: 'aoe2de_90811202',
+    profile_id: 218804,
+    handle: 'Yo_Macro',
+    civ: 'Teutons',
+    winner: true,
+    team: 0,
+    old_rating: 2698,
+    new_rating: 2710,
+    match_rating_diff: 60.0,
+    feudal_age_uptime: null, // Null car replay_enhanced = false sur aoe2de_90811202
+    castle_age_uptime: null,
+    imperial_age_uptime: null,
+    opening: null,
+    replay_summary_raw: null,
+    total_account_matches: 1180,
+    single_civ_pick_rate: 0.18,
+  },
+  {
+    game_id: 'aoe2de_90811203',
+    profile_id: 199325,
+    handle: 'Hera_RTS',
+    civ: 'Mongols',
+    winner: true,
+    team: 0,
+    old_rating: 2806,
+    new_rating: 2815,
+    match_rating_diff: 61.0,
+    feudal_age_uptime: 546.0,
+    castle_age_uptime: 1120.5,
+    imperial_age_uptime: 1840.0,
+    opening: 'Scout Rush -> Mangudai Transition',
+    replay_summary_raw: '{"feudal_scouts":5,"castle_knights":18,"mangudai":24}',
+    total_account_matches: 1890,
+    single_civ_pick_rate: 0.19,
+  },
+  {
+    game_id: 'aoe2de_90811201',
+    profile_id: 774109,
+    handle: 'FrankOnly_OTP',
+    civ: 'Franks',
+    winner: false,
+    team: 1,
+    old_rating: 2410,
+    new_rating: 2398,
+    match_rating_diff: -93.0,
+    feudal_age_uptime: 565.0,
+    castle_age_uptime: 1190.0,
+    imperial_age_uptime: null,
+    opening: 'Scout Rush',
+    replay_summary_raw: '{"feudal_scouts":6,"castle_knights":22}',
+    total_account_matches: 245,
+    single_civ_pick_rate: 0.89, // ANOMALIE SECTION 4.5 : One-Trick Pony (>100 matchs et >=80% une seule civ) -> Quarantaine !
+  },
+  {
+    game_id: 'aoe2de_99999999_ORPHAN',
+    profile_id: 551029,
+    handle: 'Ghost_OrphanRow',
+    civ: 'Britons',
+    winner: false,
+    team: 1,
+    old_rating: 2310,
+    new_rating: 2295,
+    match_rating_diff: -15.0,
+    feudal_age_uptime: null,
+    castle_age_uptime: null,
+    imperial_age_uptime: null,
+    opening: null,
+    replay_summary_raw: null,
+    total_account_matches: 90,
+    single_civ_pick_rate: 0.32, // ANOMALIE SECTION 6.2 : Violation d'intégrité référentielle (game_id absent de matches.parquet) -> Quarantaine !
+  },
+];
+
+// Données Esports & Tournois Liquipedia AoE2 (Section 2.3 & 5.3 : séparées du ladder public)
+export const LIQUIPEDIA_TOURNAMENTS: LiquipediaTournamentRecord[] = [
+  {
+    id: 'lq_rbw_el_reinado',
+    name: 'Red Bull Wololo: El Reinado',
+    tier: 'S-Tier',
+    prizePoolUsd: 180000,
+    organizer: 'Red Bull Gaming (CC BY-SA 3.0)',
+    championHandle: 'Hera_RTS',
+    patchVersion: 118476,
+  },
+  {
+    id: 'lq_kotd_5',
+    name: 'King of the Desert V (Arabia Only)',
+    tier: 'S-Tier',
+    prizePoolUsd: 80000,
+    organizer: 'MembTV / Liquipedia',
+    championHandle: 'TheViper_AOE',
+    patchVersion: 118476,
+  },
+  {
+    id: 'lq_warlords_3',
+    name: 'Warlords III (9-Map Draft)',
+    tier: 'S-Tier',
+    prizePoolUsd: 65000,
+    organizer: 'T90Official / Liquipedia',
+    championHandle: 'Liereyy_Micro',
+    patchVersion: 118476,
+  },
+  {
+    id: 'lq_nac_5',
+    name: 'Nili’s Apartment Cup V (LAN)',
+    tier: 'S-Tier',
+    prizePoolUsd: 55000,
+    organizer: 'GamerLegion / Nili',
+    championHandle: 'Yo_Macro',
+    patchVersion: 118476,
   },
 ];
 
@@ -1301,125 +1624,116 @@ export const INITIAL_TEAM_PROFILE: TeamProfile = {
   },
 };
 
-export const RUST_ENGINE_REFERENCE_CODE = `// src-tauri/src/simulation/tick_engine.rs
+export const RUST_ENGINE_REFERENCE_CODE = `// src-tauri/src/intelligence/aoestats_ingest.rs
 use serde::{Deserialize, Serialize};
+use sha2::{Digest, Sha256};
 use rusqlite::{params, Connection, Result};
 
+/// Schéma Parquet AoEStats Match (Section 3.1)
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct CeoProfile {
-    pub first_name: String,
-    pub last_name: String,
-    pub archetype: String, // PRODIGY_EX_PRO | MAGNATE_FINANCIER | STRATEGIST_VISIONARY
-    pub avatar_style: String,
+pub struct AoEStatsMatchRow {
+    pub game_id: String,
+    pub started_timestamp: String,
+    pub duration: u32,          // Filtre valide : 300..=10800 secondes (5m à 180m)
+    pub map: String,
+    pub avg_elo: Option<f64>,
+    pub num_players: u8,        // 2, 4, 6, 8 (Impair 1,3,5,7 -> data/quarantine/)
+    pub replay_enhanced: bool,  // ~38% True, >60% False (uptime nullable)
+    pub mirror: bool,           // Exclu de l'agrégation Win-Rate
+    pub raw_match_type: u8,     // 6=1v1 RM, 7=2v2 RM, 8=3v3 RM, 9=4v4 RM
 }
 
+/// Schéma Parquet AoEStats Player (Section 3.2)
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct TeamProfile {
-    pub id: String,
-    pub name: String,
-    pub tag: String,       // 3..=4 uppercase chars (e.g. "AEG")
-    pub founded_year: u16,
-    pub country_origin: String,
-    pub primary_color: String,
-    pub secondary_color: String,
-    pub emblem_shape: String,
-    pub ceo: CeoProfile,
-    pub fog_of_war_mandatory_scout: bool,
-    pub exponential_fatigue_burnout: bool,
+pub struct AoEStatsPlayerRow {
+    pub game_id: String,
+    pub profile_id: u64,
+    pub civ: String,
+    pub winner: bool,
+    pub old_rating: Option<i32>,
+    pub new_rating: Option<i32>,
+    pub feudal_age_uptime: Option<f64>,   // Nullable si replay_enhanced == false
+    pub castle_age_uptime: Option<f64>,
+    pub imperial_age_uptime: Option<f64>,
+    pub opening: Option<String>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct PlayerVector {
-    pub id: String,
-    pub handle: String,
-    pub micro: f64,      // 1.0..=100.0 (Stutter-step, Quickwall, Aim)
-    pub macro_eco: f64,  // 1.0..=100.0 (Boom, Resource Split, Map Control)
-    pub tactical: f64,   // 1.0..=100.0 (DAG Execution, Scouting)
-    pub mental: f64,     // 1.0..=100.0 (Tilt Resistance, Bo5 Stamina, Clutch)
-    pub energy: f64,     // 0.0..=100.0 (Critical threshold at 75.0%)
-    pub synergy: f64,    // 0.0..=100.0 (<60% triggers 12%-15% cohesion malus)
-}
-
-impl PlayerVector {
-    /// Dégradation exponentielle de la capacité mécanique sous le seuil de 75 %
-    pub fn effective_micro(&self) -> f64 {
-        if self.energy >= 75.0 {
-            self.micro
-        } else {
-            let deficit_ratio = (75.0 - self.energy) / 75.0;
-            self.micro * (-1.35 * deficit_ratio).exp()
-        }
+/// Validation & Quarantaine Idempotente (Section 5 & Section 6)
+pub fn validate_and_route_match(row: &AoEStatsMatchRow) -> Result<(), &'static str> {
+    if row.num_players % 2 != 0 || row.num_players == 0 {
+        return Err("ERR_ODD_PLAYER_COUNT -> Diverted to data/quarantine/");
     }
-
-    /// Modificateur de cohésion tactique (-12% à -15% en cas de déficit de synergie)
-    pub fn synergy_modifier(&self) -> f64 {
-        if self.synergy >= 60.0 {
-            1.0 + ((self.synergy - 60.0) / 40.0) * 0.05
-        } else {
-            0.85 + (self.synergy / 60.0) * 0.03 // Malus entre -12% et -15%
-        }
+    if row.duration < 300 || row.duration > 10800 {
+        return Err("ERR_DURATION_OUT_OF_BOUNDS -> Diverted to data/quarantine/");
     }
+    Ok(())
 }
 
-#[tauri::command]
-pub async fn save_team_and_ceo_profile(profile: TeamProfile) -> Result<String, String> {
-    // Persistance transactionnelle dans SQLite via le pont IPC Tauri
-    Ok(format!("Écurie [{}] {} sauvegardée avec succès", profile.tag, profile.name))
+/// Intervalle de confiance de Wilson à 95 % pour échantillons Elo 2000+ (Section 5.4)
+pub fn wilson_score_interval_95(wins: f64, n: f64) -> (f64, f64) {
+    if n <= 0.0 { return (0.0, 0.0); }
+    let z = 1.96_f64;
+    let p = wins / n;
+    let denom = 1.0 + (z * z) / n;
+    let center = (p + (z * z) / (2.0 * n)) / denom;
+    let half = (z * ((p * (1.0 - p)) / n + (z * z) / (4.0 * n * n)).sqrt()) / denom;
+    ((center - half).max(0.0), (center + half).min(1.0))
 }`;
 
-export const SQLITE_SCHEMA_REFERENCE = `-- migrations/001_esport_rts_schema.sql
-CREATE TABLE IF NOT EXISTS team_profiles (
-    id TEXT PRIMARY KEY,
-    name TEXT NOT NULL,
-    tag TEXT NOT NULL CHECK(length(tag) BETWEEN 3 AND 4),
-    founded_year INTEGER NOT NULL,
-    country_origin TEXT NOT NULL,
-    primary_color TEXT NOT NULL,
-    secondary_color TEXT NOT NULL,
-    emblem_shape TEXT NOT NULL,
-    ceo_first_name TEXT NOT NULL,
-    ceo_last_name TEXT NOT NULL,
-    ceo_archetype TEXT NOT NULL CHECK(ceo_archetype IN ('PRODIGY_EX_PRO','MAGNATE_FINANCIER','STRATEGIST_VISIONARY')),
-    ceo_avatar_style TEXT NOT NULL,
-    starting_budget_tier TEXT NOT NULL,
-    division_tier TEXT NOT NULL,
-    fog_of_war_mandatory_scout INTEGER NOT NULL DEFAULT 1,
-    exponential_fatigue_burnout INTEGER NOT NULL DEFAULT 1,
-    buyout_severity TEXT NOT NULL DEFAULT 'STANDARD'
+export const SQLITE_SCHEMA_REFERENCE = `-- data/metadata.db : Architecture Hybride Parquet + SQLite (Section 6)
+CREATE TABLE IF NOT EXISTS ingest_manifests (
+    date_range TEXT PRIMARY KEY, -- ex: '2026-10-12_2026-10-18'
+    matches_parquet_url TEXT NOT NULL,
+    players_parquet_url TEXT NOT NULL,
+    sha256_hash TEXT NOT NULL UNIQUE,
+    total_matches INTEGER NOT NULL,
+    replay_enhanced_ratio REAL NOT NULL,
+    quarantined_count INTEGER NOT NULL DEFAULT 0,
+    ingested_at_utc TEXT NOT NULL
 );
 
-CREATE TABLE IF NOT EXISTS players (
+CREATE TABLE IF NOT EXISTS quarantine_catalog (
     id TEXT PRIMARY KEY,
-    handle TEXT NOT NULL UNIQUE,
-    role TEXT NOT NULL CHECK(role IN ('IGL_STRATEGIST','ENTRY_AGGRESSOR','SUPPORT_DEFENDER','MACRO_SPECIALIST')),
-    elo INTEGER NOT NULL,
-    energy REAL NOT NULL DEFAULT 100.0,
-    synergy REAL NOT NULL DEFAULT 75.0,
-    micro_stutter INTEGER NOT NULL,
-    micro_reaction INTEGER NOT NULL,
-    micro_quickwall INTEGER NOT NULL,
-    macro_boom INTEGER NOT NULL,
-    macro_split INTEGER NOT NULL,
-    tactical_dag INTEGER NOT NULL,
-    mental_tilt INTEGER NOT NULL,
-    mental_stamina INTEGER NOT NULL
+    game_id TEXT NOT NULL,
+    profile_id INTEGER,
+    rejection_tag TEXT NOT NULL CHECK(rejection_tag IN (
+        'ERR_ODD_PLAYER_COUNT',
+        'ERR_DURATION_OUT_OF_BOUNDS',
+        'ERR_ORPHAN_PLAYER_ROW',
+        'ERR_ONE_TRICK_PONY_ACCOUNT',
+        'WARN_MIRROR_MATCH_EXCLUDED'
+    )),
+    reason TEXT NOT NULL,
+    target_parquet_path TEXT NOT NULL,
+    detected_at_utc TEXT NOT NULL
 );
 
-CREATE TABLE IF NOT EXISTS build_order_dags (
-    id TEXT PRIMARY KEY,
-    name TEXT NOT NULL,
-    archetype TEXT NOT NULL,
-    dag_json TEXT NOT NULL -- Graphe Orienté Acyclique sérialisé
+CREATE TABLE IF NOT EXISTS aoestats_matches_normalized (
+    game_id TEXT PRIMARY KEY,
+    started_timestamp TEXT NOT NULL,
+    duration INTEGER NOT NULL CHECK(duration BETWEEN 300 AND 10800),
+    map TEXT NOT NULL,
+    avg_elo REAL,
+    num_players INTEGER NOT NULL CHECK(num_players IN (2, 4, 6, 8)),
+    replay_enhanced INTEGER NOT NULL DEFAULT 0,
+    mirror INTEGER NOT NULL DEFAULT 0,
+    patch INTEGER,
+    raw_match_type INTEGER NOT NULL
 );
 
-CREATE TABLE IF NOT EXISTS match_ticks_telemetry (
-    match_id TEXT NOT NULL,
-    tick_index INTEGER NOT NULL,
-    blue_effective_force REAL NOT NULL,
-    red_effective_force REAL NOT NULL,
-    blue_morale REAL NOT NULL,
-    red_morale REAL NOT NULL,
-    gg_called INTEGER NOT NULL DEFAULT 0,
-    PRIMARY KEY (match_id, tick_index)
+CREATE TABLE IF NOT EXISTS aoestats_players_normalized (
+    game_id TEXT NOT NULL,
+    profile_id INTEGER NOT NULL,
+    civ TEXT NOT NULL,
+    winner INTEGER NOT NULL,
+    old_rating INTEGER,
+    new_rating INTEGER,
+    feudal_age_uptime REAL,   -- NULL lorsque replay_enhanced = 0 (>60% des matchs)
+    castle_age_uptime REAL,
+    imperial_age_uptime REAL,
+    opening TEXT,
+    PRIMARY KEY (game_id, profile_id),
+    FOREIGN KEY (game_id) REFERENCES aoestats_matches_normalized(game_id)
 );`;
+
 
